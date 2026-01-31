@@ -16,6 +16,7 @@
       height: 110px;
       padding: 12px;
       font-size: 16px;
+      box-sizing: border-box;
     }
     .row { margin: 14px 0; }
     .hint { color: #555; font-size: 14px; }
@@ -51,30 +52,42 @@
   </div>
 
 <script>
-  // ===== 转换规则 =====
+  // ===== 转换规则：兼容电脑端 + 移动端 =====
+  // 仅替换域名(host)，其余路径/参数/时间戳全部保留
   const RULES = [
-    { from: "youtube.com", to: "yout-ube.com" },
-    // { from: "m.youtube.com", to: "m.yout-ube.com" },
+    { from: "www.youtube.com", to: "www.yout-ube.com" },
+    { from: "m.youtube.com",   to: "m.yout-ube.com" },
   ];
 
-  function convertUrl(raw) {
-    const s = raw.trim();
+  function normalizeInputUrl(raw) {
+    const s = (raw || "").trim();
     if (!s) return "";
+
+    // 允许用户输入不带协议的形式：www.youtube.com/xxx
+    // 也允许直接输入 youtube.com/xxx
+    const candidate = s.includes("://") ? s : ("https://" + s);
+    return candidate;
+  }
+
+  function convertUrl(raw) {
+    const candidate = normalizeInputUrl(raw);
+    if (!candidate) return "";
 
     let u;
     try {
-      const candidate = s.includes("://") ? s : "https://" + s;
       u = new URL(candidate);
     } catch {
-      throw new Error("这不是合法的网址（URL）。");
+      throw new Error("这不是合法的网址（URL）。请检查是否有空格或缺少域名。");
     }
 
+    // 匹配规则并替换 host
     for (const r of RULES) {
       if (u.host === r.from) {
         u.host = r.to;
         break;
       }
     }
+
     return u.toString();
   }
 
@@ -98,8 +111,10 @@
 
   // 复制按钮
   document.getElementById("copy").addEventListener("click", async () => {
-    if (!output.value) return;
-    await navigator.clipboard.writeText(output.value);
+    const url = output.value.trim();
+    if (!url) return;
+
+    await navigator.clipboard.writeText(url);
     copied.textContent = "已复制";
     setTimeout(() => copied.textContent = "", 1200);
   });
@@ -110,7 +125,8 @@
     if (!url) return;
 
     const u = new URL(url);
-    u.hash = "top"; // 确保跳到页面顶部
+    // 加一个 hash，确保打开后在页面顶部（页眉）
+    u.hash = "top";
 
     window.open(u.toString(), "_blank", "noopener,noreferrer");
   });
