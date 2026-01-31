@@ -4,56 +4,130 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>URL 转换器</title>
+
   <style>
     body {
       font-family: system-ui, -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+      background: #f7f8fa;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ===== 页眉 ===== */
+    .header {
+      background: linear-gradient(135deg, #111, #333);
+      color: #fff;
+      padding: 36px 16px 28px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 1px;
+    }
+    .header p {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #ddd;
+    }
+
+    /* ===== 主体 ===== */
+    .container {
       max-width: 820px;
-      margin: 40px auto;
+      margin: 32px auto;
       padding: 0 16px;
     }
+
     textarea {
       width: 100%;
-      height: 110px;
-      padding: 12px;
+      height: 120px;
+      padding: 14px;
       font-size: 16px;
       box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      resize: vertical;
     }
-    .row { margin: 14px 0; }
-    .hint { color: #555; font-size: 14px; }
-    .out { background: #f6f6f6; }
+
+    .row { margin: 18px 0; }
+    .hint {
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 6px;
+    }
+
+    .actions {
+      margin-top: 22px;
+    }
+
     button {
-      padding: 10px 14px;
+      padding: 12px 18px;
       font-size: 16px;
+      border-radius: 6px;
+      border: none;
       cursor: pointer;
     }
-    .ok { color: #0a7; font-size: 14px; margin-left: 10px; }
-    .err { color: #c00; font-size: 14px; margin-top: 8px; }
+
+    #copy {
+      background: #007aff;
+      color: #fff;
+    }
+
+    #open {
+      background: #34c759;
+      color: #fff;
+      margin-left: 12px;
+    }
+
+    .ok {
+      margin-left: 12px;
+      font-size: 14px;
+      color: #28a745;
+    }
+
+    .err {
+      margin-top: 8px;
+      font-size: 14px;
+      color: #c00;
+    }
+
+    /* ===== 隐藏输出框 ===== */
+    #out {
+      display: none;
+    }
   </style>
 </head>
 
 <body>
-  <h2>URL 转换器</h2>
 
-  <div class="row">
-    <div class="hint">输入网址：</div>
-    <textarea id="in" placeholder="粘贴原始网址..."></textarea>
-    <div id="err" class="err"></div>
+  <!-- 页眉 -->
+  <div class="header">
+    <h1>URL 转换器</h1>
+    <p>粘贴原始链接，一键复制或直接打开新链接</p>
   </div>
 
-  <div class="row">
-    <div class="hint">输出新网址：</div>
-    <textarea id="out" class="out" readonly></textarea>
-  </div>
+  <!-- 主体 -->
+  <div class="container">
 
-  <div class="row">
-    <button id="copy">复制新网址</button>
-    <button id="open" style="margin-left:10px;">打开新网址</button>
-    <span id="copied" class="ok"></span>
+    <div class="row">
+      <div class="hint">输入网址</div>
+      <textarea id="in" placeholder="粘贴原始网址，例如：https://www.youtube.com/watch?v=xxxx"></textarea>
+      <div id="err" class="err"></div>
+    </div>
+
+    <!-- 输出框：功能保留，UI 隐藏 -->
+    <textarea id="out" readonly></textarea>
+
+    <div class="actions">
+      <button id="copy">复制新网址</button>
+      <button id="open">打开新网址</button>
+      <span id="copied" class="ok"></span>
+    </div>
+
   </div>
 
 <script>
-  // ===== 转换规则：兼容电脑端 + 移动端 =====
-  // 仅替换域名(host)，其余路径/参数/时间戳全部保留
+  // ===== 转换规则（桌面 + 移动端）=====
   const RULES = [
     { from: "www.youtube.com", to: "www.yout-ube.com" },
     { from: "m.youtube.com",   to: "m.yout-ube.com" },
@@ -62,11 +136,7 @@
   function normalizeInputUrl(raw) {
     const s = (raw || "").trim();
     if (!s) return "";
-
-    // 允许用户输入不带协议的形式：www.youtube.com/xxx
-    // 也允许直接输入 youtube.com/xxx
-    const candidate = s.includes("://") ? s : ("https://" + s);
-    return candidate;
+    return s.includes("://") ? s : "https://" + s;
   }
 
   function convertUrl(raw) {
@@ -77,23 +147,21 @@
     try {
       u = new URL(candidate);
     } catch {
-      throw new Error("这不是合法的网址（URL）。请检查是否有空格或缺少域名。");
+      throw new Error("这不是合法的网址（URL）");
     }
 
-    // 匹配规则并替换 host
     for (const r of RULES) {
       if (u.host === r.from) {
         u.host = r.to;
         break;
       }
     }
-
     return u.toString();
   }
 
-  const input = document.getElementById("in");
+  const input  = document.getElementById("in");
   const output = document.getElementById("out");
-  const err = document.getElementById("err");
+  const err    = document.getElementById("err");
   const copied = document.getElementById("copied");
 
   function run() {
@@ -109,29 +177,24 @@
 
   input.addEventListener("input", run);
 
-  // 复制按钮
+  // 复制
   document.getElementById("copy").addEventListener("click", async () => {
-    const url = output.value.trim();
-    if (!url) return;
-
-    await navigator.clipboard.writeText(url);
+    if (!output.value) return;
+    await navigator.clipboard.writeText(output.value);
     copied.textContent = "已复制";
     setTimeout(() => copied.textContent = "", 1200);
   });
 
-  // 打开新网址（新标签页，定位到顶部/页眉）
+  // 打开
   document.getElementById("open").addEventListener("click", () => {
-    const url = output.value.trim();
-    if (!url) return;
-
-    const u = new URL(url);
-    // 加一个 hash，确保打开后在页面顶部（页眉）
+    if (!output.value) return;
+    const u = new URL(output.value);
     u.hash = "top";
-
     window.open(u.toString(), "_blank", "noopener,noreferrer");
   });
 
   run();
 </script>
+
 </body>
 </html>
